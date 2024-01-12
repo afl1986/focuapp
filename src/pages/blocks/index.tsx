@@ -1,16 +1,40 @@
-import { useSession } from 'next-auth/react'
+import { api } from '@/shared/utils/api'
+import { Button, Drawer, Stepper } from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
+import dayjs from 'dayjs'
 import Head from 'next/head'
-
-import { api } from '@/utils/api'
+import { last, length, reduce } from 'ramda'
+import { useMemo, useState } from 'react'
 
 export default function Block() {
   const utils = api.useUtils()
   const addBlock = api.blocks.create.useMutation({
     async onSuccess() {
-      await utils.blocks.getLatest.invalidate()
+      await utils.blocks.getAll.invalidate()
     },
   })
-  const blocks = api.blocks.getLatest.useQuery()
+  const blocks = api.blocks.getAll.useQuery()
+  const [opened, { open, close }] = useDisclosure(false)
+  const [active, setActive] = useState(1)
+  const replaysTimeDiff = useMemo<Array<number>>(
+    () => [0, 2, 10, 60, 60 * 5, 60 * 24, 60 * 24 * 5, 60 * 24 * 25],
+    [],
+  )
+
+  const steps = useMemo(() => {
+    return reduce(
+      (acc, current) => {
+        const lastReplay = (last(acc) as unknown as dayjs.Dayjs)?.add(
+          replaysTimeDiff[length(acc)] as unknown as number,
+          'minute',
+        )
+        if (current === 0) return acc
+        return [...acc, lastReplay]
+      },
+      [dayjs()],
+      replaysTimeDiff,
+    )
+  }, [replaysTimeDiff])
 
   return (
     <>
@@ -20,50 +44,65 @@ export default function Block() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main>
-        <div>
-          <h1>
-            Yo <span>T3</span> App
-          </h1>
-          <button
-            disabled={addBlock.isLoading || blocks.isLoading}
-            onClick={async () => {
-              try {
-                await addBlock.mutateAsync({ text: 'yoyoy' })
-              } catch (error) {
-                console.log('error')
-              }
-            }}
+        <Drawer
+          opened={opened}
+          position="right"
+          onClose={close}
+          title="Select start date"
+        >
+          <Stepper
+            iconSize={25}
+            active={active}
+            // onStepClick={setActive}
+            orientation="vertical"
+            // size="sm"
           >
-            add block
-          </button>
-          {blocks && blocks.data?.title}
-          {blocks && blocks.data?.createdbyId}
-          <div>{/* <AuthShowcase /> */}</div>
+            {steps.map((step, idx) => {
+              const date = step.format('D MMM, YYYY,H:MM')
+              const firstRepeatText = 'First repetition after reading'
+              return (
+                <Stepper.Step
+                  key={idx}
+                  // label={idx ? `Repetition #${idx + 1}` : firstRepeatText}
+                  // description={date}
+                  label={date}
+                />
+              )
+            })}
+            {/* <Stepper.Step label="Step 1" description="Create an account" />
+            <Stepper.Step label="Step 2" description="Verify email" />
+            <Stepper.Step label="Step 3" description="Get full access" /> */}
+          </Stepper>
+        </Drawer>
+
+        <Button onClick={open}>Add block</Button>
+        <button
+          onClick={async () => {
+            try {
+              await addBlock.mutateAsync({ text: 'yoyoy' })
+            } catch (error) {
+              console.log('error')
+            }
+          }}
+        >
+          add block
+        </button>
+        <div>
+          {blocks &&
+            blocks.data?.map(({ createdbyId, title, description, id }) => {
+              return (
+                <div
+                  key={id}
+                  className="row-auto my-4 flex w-auto min-w-min rounded-xl border-l-ring p-4 px-1 shadow-lg"
+                >
+                  <h2>{title}</h2>
+                  <b>{createdbyId}</b>
+                  <section>{description}</section>
+                </div>
+              )
+            })}
         </div>
       </main>
     </>
-  )
-}
-
-function AuthShowcase() {
-  const { data: sessionData } = useSession()
-
-  const { data: secretMessage } = api.post.getSecretMessage.useQuery(
-    undefined, // no input
-    { enabled: sessionData?.user !== undefined },
-  )
-
-  return (
-    <div>
-      <p>
-        {sessionData && <span>Logged in as {sessionData.user?.name}</span>}
-        {secretMessage && <span> - {secretMessage}</span>}
-      </p>
-      {/* <button
-        onClick={sessionData ? () => void signOut() : () => void signIn()}
-      >
-        {sessionData ? 'Sign out' : 'Sign in'}
-      </button> */}
-    </div>
   )
 }

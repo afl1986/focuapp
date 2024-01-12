@@ -34,7 +34,7 @@ model Block {
     createdBy   User         @relation(fields: [createdbyId], references: [id])
     createdbyId String
     description String?
-    replays     Int          @default(7)
+    replays     Int          @default(8)
     Repetition  Repetition[]
 }
 
