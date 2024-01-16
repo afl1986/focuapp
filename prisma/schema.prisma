@@ -36,14 +36,21 @@ model Block {
     description String?
     replays     Int          @default(8)
     Repetition  Repetition[]
+    tags        Tag[]
 }
 
 model Repetition {
     id         Int      @id @default(autoincrement())
     replayDate DateTime
     done       Boolean  @default(false)
-    block      Block    @relation(fields: [blockId], references: [id])
+    block      Block    @relation(fields: [blockId], references: [id], onDelete: Cascade)
     blockId    Int
+}
+
+model Tag {
+    id     Int     @id @default(autoincrement())
+    name   String
+    blocks Block[]
 }
 
 // Necessary for Next auth

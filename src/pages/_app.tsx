@@ -1,13 +1,12 @@
-import { MantineProvider } from '@mantine/core'
+import { cn } from '@/shared/lib'
+import { api } from '@/shared/utils/api'
+import { GeistSans } from 'geist/font/sans'
 import { type Session } from 'next-auth'
 import { SessionProvider } from 'next-auth/react'
 import { type AppType } from 'next/app'
 
-import { api } from '@/shared/utils/api'
-
+import { ThemeProvider } from '@/shared/components/theme-provider.tsx'
 import '@/styles/globals.css'
-import '@mantine/core/styles.css'
-import { theme } from 'theme'
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -15,9 +14,21 @@ const MyApp: AppType<{ session: Session | null }> = ({
 }) => {
   return (
     <SessionProvider session={session}>
-      <MantineProvider theme={theme}>
-        <Component {...pageProps} />
-      </MantineProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <main
+          className={cn(
+            'min-h-screen bg-background font-sans antialiased',
+            GeistSans.variable,
+          )}
+        >
+          <Component {...pageProps} />
+        </main>
+      </ThemeProvider>
     </SessionProvider>
   )
 }
